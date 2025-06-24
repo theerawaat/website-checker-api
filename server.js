@@ -7,11 +7,6 @@ const PORT = process.env.PORT || 3000;
 // URL ที่ต้องการตรวจสอบ
 const websites = [
   'https://knightnum.online',
-  'https://nas.knightnum.online',
-  'https://owncloud.knightnum.online',
-  'https://jellyfin.knightnum.online',
-  'https://owncloud.knightnum.online', // ซ้ำ
-  'knightnum.tplinkdns.com'            // Ping domain
 ];
 
 // ฟังก์ชันสำหรับเช็คสถานะ Ping
