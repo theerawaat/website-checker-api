@@ -1,41 +1,40 @@
-const express = require("express");
-const axios = require("axios");
+const express = require('express');
+const fetch = require('node-fetch');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
+// รายชื่อเว็บที่ต้องการตรวจสอบ
 const websites = [
-  { url: "https://knightnum.online" },
-  { url: "https://nas.knightnum.online" },
-  { url: "https://owncloud.knightnum.online" },
-  { url: "https://jellyfin.knightnum.online" },
+  'https://knightnum.online',
+  'https://nas.knightnum.online',
+  'https://owncloud.knightnum.online',
+  'https://jellyfin.knightnum.online',
 ];
 
-app.get("/check", async (req, res) => {
+app.get('/check', async (req, res) => {
   try {
-    let status = [];
+    // เช็คสถานะทั้งหมดพร้อมกัน
+    const results = await Promise.all(websites.map(async (website) => {
+      try {
+        const response = await fetch(website, { timeout: 5000 });
+        return { url: website, status: response.ok ? 'up' : 'down' };
+      } catch (error) {
+        return { url: website, status: 'down' };
+      }
+    }));
 
-    for (let website of websites) {
-      // ตรวจสอบ HTTP status
-      const httpStatus = await axios
-        .get(website.url)
-        .then((response) => {
-          return response.status === 200 ? "up" : "down";
-        })
-        .catch(() => "down");
-
-      status.push({
-        url: website.url,
-        httpStatus: httpStatus,
-      });
-    }
-
-    res.json(status);
+    // ส่งข้อมูลผลลัพธ์ทั้งหมด
+    res.json(results);
   } catch (error) {
-    res.status(500).send("Error checking websites status.");
+    res.status(500).send('Error checking the websites');
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+app.get('/', (req, res) => {
+  res.send('Website Checker API');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
