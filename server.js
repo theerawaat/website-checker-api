@@ -1,59 +1,41 @@
-const express = require('express');
-const ping = require('ping');
+const express = require("express");
+const axios = require("axios");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-// URL ที่ต้องการตรวจสอบ
 const websites = [
-  'https://knightnum.online',
+  { url: "https://knightnum.online" },
+  { url: "https://nas.knightnum.online" },
+  { url: "https://owncloud.knightnum.online" },
+  { url: "https://jellyfin.knightnum.online" },
 ];
 
-// ฟังก์ชันสำหรับเช็คสถานะ Ping
-async function checkPing(host) {
+app.get("/check", async (req, res) => {
   try {
-    const res = await ping.promise.probe(host, {
-      timeout: 5, // 5 seconds timeout
-      extra: ['-i', '1'], // ส่งข้อมูลแบบ ICMP
-    });
-    return res.alive ? 'up' : 'down';
-  } catch (error) {
-    return 'down';
-  }
-}
+    let status = [];
 
-app.get('/check', async (req, res) => {
-  try {
-    const results = await Promise.all(websites.map(async (website) => {
-      let httpStatus = 'down';
-      let pingStatus = 'down';
+    for (let website of websites) {
+      // ตรวจสอบ HTTP status
+      const httpStatus = await axios
+        .get(website.url)
+        .then((response) => {
+          return response.status === 200 ? "up" : "down";
+        })
+        .catch(() => "down");
 
-      if (website.startsWith('http')) {
-        // เช็ค HTTP status สำหรับเว็บที่เป็น URL
-        try {
-          const response = await fetch(website, { timeout: 5000 });
-          httpStatus = response.ok ? 'up' : 'down';
-        } catch (error) {
-          httpStatus = 'down';
-        }
-      } else {
-        // เช็คสถานะ Ping สำหรับโดเมน
-        pingStatus = await checkPing(website);
-      }
-
-      return {
-        url: website,
+      status.push({
+        url: website.url,
         httpStatus: httpStatus,
-        pingStatus: pingStatus
-      };
-    }));
+      });
+    }
 
-    res.json(results);
+    res.json(status);
   } catch (error) {
-    res.status(500).send('Error checking the websites');
+    res.status(500).send("Error checking websites status.");
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
