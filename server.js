@@ -11,7 +11,7 @@ const websites = [
   'https://nas.knightnum.online',
   'https://owncloud.knightnum.online',
   'https://jellyfin.knightnum.online',
-  'https://knightnum.tplinkdns.com'     // สำหรับการ ping ด้วย TCP
+  'https://knightnum.ddns.net'     // สำหรับการ ping ด้วย TCP
 ];
 
 // ฟังก์ชันสำหรับเช็ค TCP Socket (เหมือนกับการ Ping)
