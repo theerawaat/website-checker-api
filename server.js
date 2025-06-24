@@ -1,66 +1,49 @@
 const express = require('express');
-const fetch = require('node-fetch');
-const net = require('net');
+const ping = require('ping');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// รายชื่อเว็บที่ต้องการตรวจสอบ
+// URL ที่ต้องการตรวจสอบ
 const websites = [
   'https://knightnum.online',
   'https://nas.knightnum.online',
   'https://owncloud.knightnum.online',
   'https://jellyfin.knightnum.online',
-  'https://knightnum.ddns.net'     // สำหรับการ ping ด้วย TCP
+  'https://owncloud.knightnum.online', // ซ้ำ
+  'knightnum.tplinkdns.com'            // Ping domain
 ];
 
-// ฟังก์ชันสำหรับเช็ค TCP Socket (เหมือนกับการ Ping)
-function checkPing(host, port = 80) {
-  return new Promise((resolve, reject) => {
-    const socket = new net.Socket();
-    socket.setTimeout(5000); // 5 seconds timeout
-
-    socket.on('connect', () => {
-      socket.end(); // เชื่อมต่อสำเร็จแล้วปิด
-      resolve(true);
+// ฟังก์ชันสำหรับเช็คสถานะ Ping
+async function checkPing(host) {
+  try {
+    const res = await ping.promise.probe(host, {
+      timeout: 5, // 5 seconds timeout
+      extra: ['-i', '1'], // ส่งข้อมูลแบบ ICMP
     });
-
-    socket.on('timeout', () => {
-      socket.destroy();
-      reject(new Error('timeout'));
-    });
-
-    socket.on('error', (err) => {
-      reject(err);
-    });
-
-    socket.connect(port, host);
-  });
+    return res.alive ? 'up' : 'down';
+  } catch (error) {
+    return 'down';
+  }
 }
 
 app.get('/check', async (req, res) => {
   try {
     const results = await Promise.all(websites.map(async (website) => {
-      const url = new URL(website);
-      const host = url.hostname;
-      const port = url.protocol === 'https:' ? 443 : 80;
-
       let httpStatus = 'down';
       let pingStatus = 'down';
 
-      try {
-        // เช็ค HTTP Status
-        const response = await fetch(website, { timeout: 5000 });
-        httpStatus = response.ok ? 'up' : 'down';
-      } catch (error) {
-        httpStatus = 'down';
-      }
-
-      try {
-        // เช็ค TCP Ping
-        pingStatus = await checkPing(host, port) ? 'up' : 'down';
-      } catch (error) {
-        pingStatus = 'down';
+      if (website.startsWith('http')) {
+        // เช็ค HTTP status สำหรับเว็บที่เป็น URL
+        try {
+          const response = await fetch(website, { timeout: 5000 });
+          httpStatus = response.ok ? 'up' : 'down';
+        } catch (error) {
+          httpStatus = 'down';
+        }
+      } else {
+        // เช็คสถานะ Ping สำหรับโดเมน
+        pingStatus = await checkPing(website);
       }
 
       return {
@@ -74,10 +57,6 @@ app.get('/check', async (req, res) => {
   } catch (error) {
     res.status(500).send('Error checking the websites');
   }
-});
-
-app.get('/', (req, res) => {
-  res.send('Website Checker API');
 });
 
 app.listen(PORT, () => {
