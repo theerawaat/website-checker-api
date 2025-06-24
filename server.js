@@ -1,40 +1,36 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// รายชื่อเว็บที่ต้องการตรวจสอบ
-const websites = [
-  'https://knightnum.online',
-  'https://nas.knightnum.online',
-  'https://owncloud.knightnum.online',
-  'https://jellyfin.knightnum.online',
-];
+// Helper function to check website status
+async function checkWebsite(url) {
+    try {
+        const response = await axios.get(url);
+        if (response.status >= 200 && response.status < 400) {
+            return true; // Website is up
+        } else {
+            return false; // Website is down
+        }
+    } catch (error) {
+        return false; // Website is down
+    }
+}
 
+// Endpoint to check multiple websites
 app.get('/check', async (req, res) => {
-  try {
-    // เช็คสถานะทั้งหมดพร้อมกัน
-    const results = await Promise.all(websites.map(async (website) => {
-      try {
-        const response = await fetch(website, { timeout: 5000 });
-        return { url: website, status: response.ok ? 'up' : 'down' };
-      } catch (error) {
-        return { url: website, status: 'down' };
-      }
-    }));
+    const websites = [
+        { url: 'https://knightnum.online', status: await checkWebsite('https://knightnum.online') },
+        { url: 'https://nas.knightnum.online', status: await checkWebsite('https://nas.knightnum.online') },
+        { url: 'https://owncloud.knightnum.online', status: await checkWebsite('https://owncloud.knightnum.online') },
+        { url: 'https://jellyfin.knightnum.online', status: await checkWebsite('https://jellyfin.knightnum.online') },
+    ];
 
-    // ส่งข้อมูลผลลัพธ์ทั้งหมด
-    res.json(results);
-  } catch (error) {
-    res.status(500).send('Error checking the websites');
-  }
+    res.json(websites); // Return status as true/false for each website
 });
 
-app.get('/', (req, res) => {
-  res.send('Website Checker API');
-});
-
+// Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
